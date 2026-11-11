@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block title %}{{ 'Log in' if mode=='login' else 'Register' }} · ExamPro{% endblock %}
+{% block body %}<div class="auth"><div class="l"><div class="logo"><i class="mark">E</i>Exam<span>Pro</span></div>
+<h1>Sit your exams with confidence.</h1><p>Timed tests, instant marking and clear results, all in one place for students and administrators.</p></div>
+<div class="r"><div class="box"><h1>{{ 'Welcome back' if mode=='login' else 'Create your account' }}</h1>
+<p class="mu">{{ 'Log in to continue.' if mode=='login' else 'Register as a student to get started.' }}</p>
+{% with m = get_flashed_messages(with_categories=true) %}{% for c,t in m %}<div class="flash {{c}}">{{t}}</div>{% endfor %}{% endwith %}
+<form method="post">
+{% if mode=='register' %}<label>Full name</label><input name="name" required>{% endif %}
+<label>Email</label><input name="email" type="email" required>
+<label>Password</label><input name="password" type="password" minlength="6" required>
+<button class="btn" style="width:100%;margin-top:20px">{{ 'Log in' if mode=='login' else 'Create account' }}</button></form>
+<p class="mu" style="text-align:center;margin-top:14px">{% if mode=='login' %}New here? <a href="/register">Register</a>{% else %}Have an account? <a href="/login">Log in</a>{% endif %}</p>
+{% if mode=='login' %}<p class="mu" style="font-size:.78rem;text-align:center">Demo: student@exampro.com / student123<br>Admin: admin@exampro.com / admin123</p>{% endif %}
+</div></div></div>{% endblock %}

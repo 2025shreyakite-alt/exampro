@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block title %}{{ exam.title }} · ExamPro{% endblock %}
+{% block body %}
+<div class="ebar"><div><b>{{ exam.title }}</b><br><span class="mu" id="prog"></span></div><div class="tm"><svg class="ic"><use href="#i-clock"/></svg><span class="timer" id="timer">--:--</span></div>
+<button class="btn" onclick="finish(false)">Submit Exam</button></div>
+<div class="pbar"><i id="pfill"></i></div>
+<div class="exam"><div class="card"><div id="qbox"></div>
+<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+<button class="btn alt" id="prev">Previous</button><button class="btn alt" id="mark"></button><button class="btn" id="next">Next</button></div></div>
+<div class="card" style="align-self:start"><h2>Questions</h2><div class="pal" id="pal"></div>
+<div class="legend"><i style="background:var(--ok)"></i>Answered<i style="background:var(--warn)"></i>Review<i style="background:#fff;border:2px solid var(--bd)"></i>Unanswered</div></div></div>
+{% endblock %}
+{% block scripts %}<script>
+const EXAM={{ exam|tojson }}, Q={{ questions|tojson }};
+const ans={}, flag=new Set(); let i=0, left=EXAM.duration*60, sent=false;
+const $=id=>document.getElementById(id), esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function render(){
+ const q=Q[i]; if(!q){$('qbox').innerHTML='<p>This exam has no questions.</p>';return}
+ $('qbox').innerHTML=`<span class="mu">Question ${i+1} of ${Q.length}</span><h2 style="font-size:1.3rem;line-height:1.4;margin:8px 0 16px">${esc(q.text)}</h2>`+
+  ['a','b','c','d'].map(k=>`<label class="opt ${ans[q.id]===k.toUpperCase()?'sel':''}"><input type="radio" name="o" ${ans[q.id]===k.toUpperCase()?'checked':''} onchange="pick('${k.toUpperCase()}')"><b class="L">${k.toUpperCase()}</b> ${esc(q[k])}</label>`).join('');
+ $('mark').textContent=flag.has(q.id)?'Unmark Review':'Mark for Review';
+ $('prev').disabled=i===0; $('next').disabled=i===Q.length-1;
+ $('pal').innerHTML=Q.map((x,n)=>`<button class="${flag.has(x.id)?'rev':ans[x.id]?'ans':''} ${n===i?'cur':''}" onclick="go(${n})">${n+1}</button>`).join('');
+ $('prog').textContent=`${Object.keys(ans).length} of ${Q.length} answered`; $('pfill').style.width=(Object.keys(ans).length/Q.length*100)+'%';
+}
+const go=n=>{i=n;render()}, pick=k=>{ans[Q[i].id]=k;render()};
+$('prev').onclick=()=>go(i-1); $('next').onclick=()=>go(i+1);
+$('mark').onclick=()=>{const id=Q[i].id; flag.has(id)?flag.delete(id):flag.add(id); render()};
+async function finish(auto){
+ if(sent)return;
+ const un=Q.length-Object.keys(ans).length;
+ if(!auto && !confirm(un?`You have ${un} unanswered question(s). Submit anyway?`:'Submit your exam now?'))return;
+ sent=true; window.onbeforeunload=null;
+ const r=await fetch(`/api/exam/${EXAM.id}/submit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers:ans})});
+ if(r.ok) location.href=(await r.json()).url; else {sent=false; alert('Submit failed. Please try again.')}
+}
+// Countdown: updates every second, auto-submits at zero
+function tick(){const m=Math.floor(left/60),s=left%60; $('timer').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+ $('timer').classList.toggle('low',left<=60); if(left<=0){clearInterval(t);alert('Time is up. Your exam is being submitted.');finish(true)} left--}
+const t=setInterval(tick,1000); tick(); render();
+window.onbeforeunload=()=>'Your exam is in progress.';
+</script>{% endblock %}

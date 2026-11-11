@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block title %}Dashboard · ExamPro{% endblock %}
+{% block content %}
+<div class="hero"><div><h1>Welcome back, {{ session.name.split()[0] }}</h1>
+<p>{% if stats.upcoming %}You have {{ stats.upcoming }} upcoming exam{{ 's' if stats.upcoming!=1 }}. Keep your streak going.{% else %}You are all caught up. Try a practice set.{% endif %}</p>
+<a class="btn light" href="{{ '/exams?kind=exam' if stats.upcoming else '/exams?kind=practice' }}">{{ 'View my exams' if stats.upcoming else 'Start practising' }}</a></div>
+<div class="av">{{ session.name[0] }}</div></div>
+<div class="grid g4">{% for n,v,i,c in [('Total Exams',stats.total,'layers','c1'),('Completed Exams',stats.done,'check','c2'),('Upcoming Exams',stats.upcoming,'cal','c3'),('Average Score',stats.avg~'%','award','c4')] %}
+<div class="card lift stat"><div class="si {{c}}"><svg class="ic"><use href="#i-{{i}}"/></svg></div><div><span>{{n}}</span><b>{{v}}</b></div></div>{% endfor %}</div>
+<div class="sec"><h2>Quick access</h2></div>
+<div class="grid g4 quick">{% for t,h,i,c in [('Learn','/resources','book','c1'),('Practice','/exams?kind=practice','target','c2'),('Mock Tests','/exams?kind=mock','clock','c3'),('Revision','/exams?kind=practice','file','c4')] %}
+<a href="{{h}}"><div class="si {{c}}"><svg class="ic"><use href="#i-{{i}}"/></svg></div>{{t}}</a>{% endfor %}</div>
+<div class="grid g2" style="margin-top:30px"><div>
+<div class="sec" style="margin-top:0"><h2>Upcoming examinations</h2><a href="/exams?kind=exam" class="mu">View all</a></div>
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr))">{% for e in upcoming %}<div class="card ex"><span class="tag" style="align-self:flex-start">{{ e.subject }}</span>
+<h2>{{ e.title }}</h2><div class="meta"><span><svg class="ic"><use href="#i-cal"/></svg>{{ e.exam_date }}</span><span><svg class="ic"><use href="#i-clock"/></svg>{{ e.duration }} minutes</span></div><a class="btn" href="/exam/{{ e.id }}">Start Exam</a></div>
+{% else %}<div class="card mu">No upcoming exams. Try a practice set.</div>{% endfor %}</div>
+<div class="card" style="margin-top:20px"><h2 style="margin-bottom:16px">Subject-wise progress</h2>
+<div class="rings">{% for s in subj %}<div><div class="ring" style="--v:{{ s.p|round|int }}"><b>{{ s.p|round|int }}%</b></div>{{ s.subject }}</div>
+{% else %}<span class="mu">Complete an exam to see your progress.</span>{% endfor %}</div></div></div>
+<div class="card" style="align-self:start"><div class="ch"><button onclick="mv(-1)" aria-label="Previous month">&lsaquo;</button><h2 id="mon" style="margin:0"></h2><button onclick="mv(1)" aria-label="Next month">&rsaquo;</button></div><div class="cal" id="cal"></div>
+<p class="mu" style="margin-top:14px"><span class="tag" style="background:var(--g);color:#fff">&nbsp;</span> Exam day</p></div></div>
+{% endblock %}
+{% block scripts %}<script>
+// Calendar: today highlighted, exam dates in blue, month navigation
+const ed=new Set({{ dates|tojson }}), now=new Date(); let off=0;
+function draw(){const d0=new Date(now.getFullYear(),now.getMonth()+off,1),y=d0.getFullYear(),m=d0.getMonth();
+ document.getElementById('mon').textContent=d0.toLocaleString('en',{month:'long',year:'numeric'});
+ let h='SMTWTFS'.split('').map(d=>`<div class="h">${d}</div>`).join('')+'<div></div>'.repeat(d0.getDay());
+ for(let d=1;d<=new Date(y,m+1,0).getDate();d++){const k=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const today=off===0&&d===now.getDate();h+=`<div class="${ed.has(k)?'e':today?'t':''}">${d}</div>`}
+ document.getElementById('cal').innerHTML=h}
+const mv=n=>{off+=n;draw()}; draw();</script>{% endblock %}

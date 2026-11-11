@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block title %}{{ page|capitalize }} · ExamPro{% endblock %}
+{% block content %}
+{% if page=='results' %}<h1>Results</h1><div class="card"><table><tr><th>Exam</th><th>Subject</th><th>Score</th><th>Status</th><th>Date</th><th></th></tr>
+{% for r in rows %}{% set p=(r.score*100/r.total)|round|int %}<tr><td>{{ r.title }}</td><td>{{ r.subject }}</td><td>{{ r.score }}/{{ r.total }} ({{ p }}%)</td>
+<td><span class="tag {{ 'ok' if p>=r.pass_mark else 'bad' }}">{{ 'Pass' if p>=r.pass_mark else 'Fail' }}</span></td><td>{{ r.submitted_at }}</td><td><a href="/result/{{ r.id }}">View</a></td></tr>
+{% else %}<tr><td colspan="6" class="mu">No results yet. <a href="/exams">Take an exam</a>.</td></tr>{% endfor %}</table></div>
+{% elif page=='resources' %}<h1>Resources</h1><div class="grid g3">
+{% for t,d in [('Study guides','Summaries for Mathematics, Science and English.'),('Revision tips','Use practice sets, then review every wrong answer.'),('Exam strategy','Answer easy questions first and mark doubtful ones for review.')] %}
+<div class="card"><h2>{{t}}</h2><p class="mu">{{d}}</p><a class="btn alt" href="/exams?kind=practice">Practise now</a></div>{% endfor %}</div>
+{% else %}<h1>Profile</h1><div class="card" style="max-width:460px"><div class="av" style="width:64px;height:64px;font-size:1.5rem">{{ u.name[0] }}</div>
+<h2 style="margin-top:12px">{{ u.name }}</h2><p class="mu">{{ u.email }}<br>Role: {{ u.role }}<br>Exams attempted: {{ n }}</p></div>{% endif %}
+{% endblock %}

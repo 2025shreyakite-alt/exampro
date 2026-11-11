@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block title %}Result · ExamPro{% endblock %}
+{% block content %}
+<div class="hero"><div class="ring big" style="--v:{{ pct }}"><b>{{ pct }}%</b></div>
+<div style="flex:1;min-width:200px"><span class="tag">{{ 'Passed' if passed else 'Not passed' }}</span><h1>{{ a.title }}</h1><p>{{ a.subject }} · Submitted {{ a.submitted_at }}</p></div>
+<a class="btn light" href="{{ '/admin' if session.role=='admin' else '/results' }}">Back</a></div>
+<div class="grid g4">{% for n,v,i,c in [('Marks',a.score~' / '~a.total,'award','c1'),('Correct',a.score,'check','c2'),('Incorrect',wrong,'x','c5'),('Skipped',skipped,'help','c3')] %}
+<div class="card lift stat"><div class="si {{c}}"><svg class="ic"><use href="#i-{{i}}"/></svg></div><div><span>{{n}}</span><b>{{v}}</b></div></div>{% endfor %}</div>
+<div class="grid g3" style="margin-top:18px"><div class="card"><h2>Answer breakdown</h2><canvas id="c1" height="200"></canvas></div>
+<div class="card"><h2>Your score history (%)</h2><canvas id="c2" height="200"></canvas></div></div>
+<div class="card" style="margin-top:18px"><h2 style="margin-bottom:6px">Answer review</h2>
+{% for r in rev %}<div class="rev-q {{ 'c' if r.choice==r.correct else 'w' }}"><b>{{ loop.index }}. {{ r.text }}</b><br>
+<span class="mu">Your answer: {{ r.choice and (r.choice ~ '. ' ~ r[r.choice|lower]) or 'Not answered' }}</span><br>
+<span style="color:var(--ok)">Correct: {{ r.correct }}. {{ r[r.correct|lower] }}</span></div>{% endfor %}</div>
+{% endblock %}
+{% block scripts %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><script>
+new Chart(c1,{type:'doughnut',data:{labels:['Correct','Wrong','Skipped'],datasets:[{data:[{{ a.score }},{{ wrong }},{{ skipped }}],backgroundColor:['#2eaa6b','#e0524d','#c9d3dc']}]}});
+new Chart(c2,{type:'line',data:{labels:{{ hist|tojson }}.map((_,n)=>'#'+(n+1)),datasets:[{data:{{ hist|tojson }},borderColor:'#249ED0',backgroundColor:'#e6f4fa',fill:true,tension:.3}]},options:{plugins:{legend:{display:false}},scales:{y:{min:0,max:100}}}});
+</script>{% endblock %}

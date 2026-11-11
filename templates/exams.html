@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% block title %}Exams · ExamPro{% endblock %}
+{% block content %}<h1>{{ {'exam':'My Exams','practice':'Practice','mock':'Mock Tests'}[kind] }}</h1><p class="mu" style="margin-bottom:20px">Choose a paper to begin. Your answers are marked automatically.</p>
+<div class="grid g3">{% for e in rows %}<div class="card ex"><div class="tr"><span class="tag">{{ e.subject }}</span><span class="tag k">{{ {'exam':'Exam','practice':'Practice','mock':'Mock'}[e.kind] }}</span></div>
+<h2 style="margin-top:8px;font-size:1.15rem">{{ e.title }}</h2>
+<div class="meta"><span><svg class="ic"><use href="#i-clock"/></svg>{{ e.duration }} min</span><span><svg class="ic"><use href="#i-help"/></svg>{{ e.n }} questions</span><span><svg class="ic"><use href="#i-award"/></svg>Pass {{ e.pass_mark }}%</span>{% if e.exam_date %}<span><svg class="ic"><use href="#i-cal"/></svg>{{ e.exam_date }}</span>{% endif %}</div>
+{% if e.tries %}<span class="tag ok" style="align-self:flex-start">Attempted {{ e.tries }}x</span>{% endif %}
+<a class="btn" href="/exam/{{ e.id }}">{{ 'Retake exam' if e.tries else 'Start Exam' }}</a></div>
+{% else %}<div class="card mu">Nothing published here yet.</div>{% endfor %}</div>{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}{% block title %}Admin · ExamPro{% endblock %}
+{% block body %}<main style="margin:0 auto;padding-top:24px">
+<div class="hero"><div><h1>Admin console</h1><p>Manage exams, questions, students and results.</p></div><div style="display:flex;gap:12px;align-items:center"><b>{{ session.name }}</b><a class="btn light" href="/logout"><svg class="ic"><use href="#i-out"/></svg>Log out</a></div></div>
+<div class="tabs" id="tabs">{% for t in ['Exams','Questions','Students','Results'] %}<button onclick="show('{{t}}')">{{t}}</button>{% endfor %}</div>
+<div id="Exams"><div class="grid g2"><div class="card"><table id="et"></table></div>
+<div class="card" style="align-self:start"><h2 id="eh">New exam</h2><input type="hidden" id="eid">
+<label>Title</label><input id="title"><label>Subject</label><input id="subject">
+<div class="row"><div><label>Type</label><select id="kind"><option value="exam">Exam</option><option value="practice">Practice</option><option value="mock">Mock</option></select></div>
+<div><label>Minutes</label><input id="duration" type="number" value="30"></div></div>
+<div class="row"><div><label>Pass mark %</label><input id="pass_mark" type="number" value="40"></div><div><label>Date</label><input id="exam_date" type="date"></div></div>
+<button class="btn" style="margin-top:14px" onclick="saveExam()">Save exam</button> <button class="btn alt" onclick="resetExam()">Clear</button></div></div></div>
+<div id="Questions" hidden><div class="card" style="margin-bottom:18px"><label>Exam</label><select id="qexam" onchange="loadQs()"></select></div>
+<div class="grid g2"><div class="card"><table id="qt"></table></div>
+<div class="card" style="align-self:start"><h2 id="qh">Add question</h2><input type="hidden" id="qid">
+<label>Question</label><input id="text"><label>Option A</label><input id="a"><label>Option B</label><input id="b"><label>Option C</label><input id="c"><label>Option D</label><input id="d">
+<label>Correct answer</label><select id="correct"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+<button class="btn" style="margin-top:14px" onclick="saveQ()">Save question</button> <button class="btn alt" onclick="resetQ()">Clear</button></div></div></div>
+<div id="Students" hidden><div class="card"><table id="st"></table></div></div>
+<div id="Results" hidden><div class="card" style="margin-bottom:18px"><h2>Average score per exam (%)</h2><canvas id="ch" height="90"></canvas></div><div class="card"><table id="rt"></table></div></div>
+</main>{% endblock %}
+{% block scripts %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><script>
+const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(url,method='GET',body){const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:body&&JSON.stringify(body)});
+ const d=await r.json().catch(()=>({})); if(!r.ok){alert(d.error||'Something went wrong');throw 0} return d}
+let exams=[], qs=[], chart;
+function show(t){['Exams','Questions','Students','Results'].forEach(x=>$(x).hidden=x!==t);
+ [...$('tabs').children].forEach(b=>b.classList.toggle('on',b.textContent===t));
+ ({Exams:loadExams,Questions:async()=>{await loadExams();loadQs()},Students:loadStudents,Results:loadResults})[t]()}
+// ---- exams ----
+async function loadExams(){exams=await api('/api/admin/exams');
+ $('et').innerHTML='<tr><th>Title</th><th>Type</th><th>Qs</th><th>Status</th><th></th></tr>'+exams.map(e=>`<tr><td>${esc(e.title)}<br><span class="mu">${esc(e.subject)} · ${e.duration} min</span></td><td>${e.kind}</td><td>${e.n}</td>
+ <td><span class="tag ${e.published?'ok':''}">${e.published?'Published':'Draft'}</span></td><td>
+ <button class="btn sm alt" onclick="pub(${e.id})">${e.published?'Unpublish':'Publish'}</button> <button class="btn sm alt" onclick="editExam(${e.id})">Edit</button> <button class="btn sm red" onclick="delExam(${e.id})">Delete</button></td></tr>`).join('');
+ const keep=$('qexam').value; $('qexam').innerHTML=exams.map(e=>`<option value="${e.id}">${esc(e.title)}</option>`).join(''); if(keep)$('qexam').value=keep}
+const F=['title','subject','kind','duration','pass_mark','exam_date'];
+function resetExam(){$('eid').value='';F.forEach(f=>$(f).value=f==='duration'?30:f==='pass_mark'?40:f==='kind'?'exam':'');$('eh').textContent='New exam'}
+function editExam(id){const e=exams.find(x=>x.id===id);F.forEach(f=>$(f).value=e[f]??'');$('eid').value=id;$('eh').textContent='Edit exam'}
+async function saveExam(){const b={};F.forEach(f=>b[f]=$(f).value);const id=$('eid').value;
+ await api(id?`/api/admin/exams/${id}`:'/api/admin/exams',id?'PUT':'POST',b);resetExam();loadExams()}
+async function delExam(id){if(confirm('Delete this exam, its questions and all results?')){await api(`/api/admin/exams/${id}`,'DELETE');loadExams()}}
+async function pub(id){await api(`/api/admin/exams/${id}/publish`,'POST');loadExams()}
+// ---- questions ----
+const QF=['text','a','b','c','d','correct'];
+async function loadQs(){const id=$('qexam').value; if(!id){$('qt').innerHTML='<tr><td class="mu">Create an exam first.</td></tr>';return}
+ qs=await api(`/api/admin/exams/${id}/questions`);
+ $('qt').innerHTML='<tr><th>Question</th><th>Answer</th><th></th></tr>'+(qs.map(q=>`<tr><td>${esc(q.text)}</td><td>${q.correct}</td><td><button class="btn sm alt" onclick="editQ(${q.id})">Edit</button> <button class="btn sm red" onclick="delQ(${q.id})">Delete</button></td></tr>`).join('')||'<tr><td class="mu" colspan="3">No questions yet.</td></tr>')}
+function resetQ(){$('qid').value='';QF.forEach(f=>$(f).value=f==='correct'?'A':'');$('qh').textContent='Add question'}
+function editQ(id){const q=qs.find(x=>x.id===id);QF.forEach(f=>$(f).value=q[f]);$('qid').value=id;$('qh').textContent='Edit question'}
+async function saveQ(){const b={};QF.forEach(f=>b[f]=$(f).value);const id=$('qid').value;
+ await api(id?`/api/admin/questions/${id}`:`/api/admin/exams/${$('qexam').value}/questions`,id?'PUT':'POST',b);resetQ();loadQs()}
+async function delQ(id){if(confirm('Delete this question?')){await api(`/api/admin/questions/${id}`,'DELETE');loadQs()}}
+// ---- students & results ----
+async function loadStudents(){const s=await api('/api/admin/students');
+ $('st').innerHTML='<tr><th>Name</th><th>Email</th><th>Attempts</th><th>Avg</th><th></th></tr>'+s.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${u.attempts}</td><td>${u.avg??'-'}${u.avg!=null?'%':''}</td><td><button class="btn sm red" onclick="delStudent(${u.id})">Remove</button></td></tr>`).join('')}
+async function delStudent(id){if(confirm('Remove this student and their results?')){await api(`/api/admin/students/${id}`,'DELETE');loadStudents()}}
+async function loadResults(){const d=await api('/api/admin/analytics'); chart&&chart.destroy();
+ chart=new Chart($('ch'),{type:'bar',data:{labels:d.per_exam.map(e=>e.title),datasets:[{label:'Average %',data:d.per_exam.map(e=>e.avg||0),backgroundColor:'#249ED0',borderRadius:8}]},options:{plugins:{legend:{display:false}},scales:{y:{min:0,max:100}}}});
+ $('rt').innerHTML='<tr><th>Student</th><th>Exam</th><th>Score</th><th>Status</th><th>Date</th><th></th></tr>'+d.results.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.title)}</td><td>${r.score}/${r.total} (${r.pct}%)</td><td><span class="tag ${r.ok?'ok':'bad'}">${r.ok?'Pass':'Fail'}</span></td><td>${r.submitted_at}</td><td><a href="/result/${r.id}">View</a></td></tr>`).join('')}
+show('Exams');
+</script>{% endblock %}
